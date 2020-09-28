@@ -1,5 +1,3 @@
-let customers = require('./deli_customers.json')
-let inventory = require('./inventory.json')
 const bodyParser = require('body-parser');
 // Import express
 let express = require('express')
@@ -15,8 +13,10 @@ var oxr = require('open-exchange-rates');
 var port = process.env.PORT || 8081;
 //access to user cookies
 var cookieParser = require('cookie-parser');
-//axios to make a request to openexchange money rates
-let axios = require('axios')
+
+let customers = JSON.parse(fs.readFileSync('deli_customers.json', 'utf8'));
+
+let inventory = JSON.parse(fs.readFileSync('inventory.json', 'utf8'));
 
 // Set App ID (required):
 oxr.set({
@@ -73,7 +73,7 @@ app.get('/user/info', async(req,res) => {
                               second_name: customers[i]["last_name"],
                               email: customers[i]["email"]});
          }
-     res.send(moneyRates)
+     res.send(userValues)
      }
 
      catch{
@@ -160,18 +160,79 @@ app.post('/user/distance', (req,res) => {
 
 //Create an endpoint that can update the currencies and prices of suppliers with real time conversion rates.
 app.post('/items/priceandcurrency', (req,res) => {
-     let {item, currency} = req.body
+     let {item, newCurrency} = req.body
      try{
-               // we need to get the current price and currency. 
-               let specificItem = inventory.filter(function (el) {
+          let specificItem = inventory.filter(function (el) {
+               return el.item === item;
+             });
+          let oldPrice = specificItem[0].details.price;
+          // change the string to lowercase to account for changes in type. Dollar, dollar, dOllar, etc.
+          let oldCurrency = specificItem[0].supplier_details.currency.toLowerCase()
+          let oldCurrencyCountryCode = specificItem[0].supplier_details.country_code.toLowerCase()
+          let conversionTimeStamp = 'Exchange rates published: ' + (new Date(oxr.timestamp)).toUTCString();
+          
+          // obnoxiously big switch statement to translate currency names to abbreviations so that they work with the fx and money packages for easy conversion.
+var abbreviatedOldCurrency = (function() {         
+     switch (true) {
+          case oldCurrency === 'dollar':
+              return('USD');
+          case oldCurrency === 'euro':
+              return("EUR");
+          case oldCurrency ===  'rupee':
+              return("INR");
+          case oldCurrency === 'afghani':
+              return("AFN");
+          case oldCurrency === 'tugrik':
+               return('MNT');
+           case oldCurrency === 'yuan renminbi':
+               return("CNY");
+           case oldCurrency ===  'baht':
+               return("THB");
+           case oldCurrency === 'afghani':
+               return("AFN");
+          case oldCurrency === 'rial':
+               return("IRR");
+          case oldCurrency === 'ruble':
+               return("RUB");
+          case oldCurrency === 'peso' && oldCurrencyCountryCode === 'ph':
+               return("MXN");
+          case oldCurrency === 'rupiah':
+               return("RP");
+          case oldCurrency === 'ringgit':
+               return("RM");
+          case oldCurrency === 'peso' && oldCurrencyCountryCode === 'co' :
+               return("PHP");
+          case oldCurrency === 'dollar' && oldCurrencyCountryCode === 'tw' :
+               return("TWD");
+
+          default:
+              console.log("Currency Format not found");
+      }
+     })(newCurrency)
+               // converting currency and price 
+               let newPrice = fx(oldPrice).from(abbreviatedOldCurrency).to(newCurrency).toFixed(6);
+
+
+
+               // update the JSON file with new values.
+               // read file and make object
+               let content = JSON.parse(fs.readFileSync('inventory.json', 'utf8'));
+               // filter object to find specific object
+               let specificContent = content.filter(function (el) {
                     return el.item === item;
                   });
-               let oldPrice = specificItem[0].details.price;
-               let oldCurrency = specificItem[0].supplier_details.currency
-               let conversionTimeStamp = 'Exchange rates published: ' + (new Date(oxr.timestamp)).toUTCString();
-               
-               let newPrice = fx(10).from(`USD`).to('GBP').toFixed(6);
-               res.status(200).json( '10 EUR in GBP: ' + newPrice );
+               // edit or add property
+               specificContent[0].details.price = newPrice;
+               specificContent[0].supplier_details.currency = newCurrency
+               //write file
+               fs.writeFileSync('inventory.json', JSON.stringify(content, null, 1)); 
+
+
+
+      // need to implement a similar feature to change the user's input to a correct format!
+     // ####################################################################################
+     //
+               res.status(200).json( `You have just changed the price of ${item} from ${oldPrice} ${abbreviatedOldCurrency} to ${newPrice} ${newCurrency}. This conversion was based on ${conversionTimeStamp}. Published by 'https://openexchangerates.org/' `);
            
               
   
