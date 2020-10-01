@@ -320,8 +320,8 @@ app.post('/items/add', auth, requestLogger, (req, res) => {
 
 
 // Create an endpoint that can process customer orders (make the relevant database updates).
-app.post('/orders/process',auth, requestLogger, (req, res) => {
-     let { order, id} = req.body
+app.post('/orders/process', auth, requestLogger, (req, res) => {
+     let { order, id } = req.body
      try {
           // this array stores the cost of the items. It's then reduced to give the overall value of the purchase.
           // this is a big flaw in the database as the cost of the transaction is not currency specific.
@@ -340,7 +340,7 @@ app.post('/orders/process',auth, requestLogger, (req, res) => {
                // filter the JSON item to find the particular item we want to edit 
                let specificItem = inventoryContent.filter(function (el) {
                     return el.item === item;
-                });
+               });
                // the current price of the item we are updating
                let itemPrice = specificItem[0].details.price;
                // the current quantity of the item we are updating
@@ -353,38 +353,38 @@ app.post('/orders/process',auth, requestLogger, (req, res) => {
 
                specificItem[0].details.amount = newQuantity
 
-                fs.writeFileSync('inventory.json', JSON.stringify(inventoryContent, null, 2)); 
+               fs.writeFileSync('inventory.json', JSON.stringify(inventoryContent, null, 2));
           }
 
-           //##############################everything relating to updating the customer for the order ########################
-           // read the deli customers file and make it editable
-           let customerContent = JSON.parse(fs.readFileSync('deli_customers.json', 'utf8'));
-           // filters all customers to find the specific customer.
-           let specificCustomer = customerContent.filter(function (el) {
-              return el.id === id;
-           });
-           // date timestamp for the time of the order/transaction
-           let date = new Date();
-           var dateString = moment(date).format('YYYY-MM-DD');
-           
-           // reduce the cost array to find the final price of the transaction
-           let costString = costStorage.reduce(function(a, b){
-               return a + b;
-           }, 0);
+          //##############################everything relating to updating the customer for the order ########################
+          // read the deli customers file and make it editable
+          let customerContent = JSON.parse(fs.readFileSync('deli_customers.json', 'utf8'));
+          // filters all customers to find the specific customer.
+          let specificCustomer = customerContent.filter(function (el) {
+               return el.id === id;
+          });
+          // date timestamp for the time of the order/transaction
+          let date = new Date();
+          var dateString = moment(date).format('YYYY-MM-DD');
 
-           // push the new transaction into the existing customer's last_transactions array. Future design could be to push them in in order? Would then remove need for script that orders transactions.
+          // reduce the cost array to find the final price of the transaction
+          let costString = costStorage.reduce(function (a, b) {
+               return a + b;
+          }, 0);
+
+          // push the new transaction into the existing customer's last_transactions array. Future design could be to push them in in order? Would then remove need for script that orders transactions.
           specificCustomer[0].last_transactions.push({
                "date": dateString,
-              "amount": costString.toString()
+               "amount": costString.toString()
           });
 
           // save the file with the new transaction(s) added.
-           fs.writeFileSync('deli_customers.json', JSON.stringify(customerContent, null, 2)); 
+          fs.writeFileSync('deli_customers.json', JSON.stringify(customerContent, null, 2));
 
-           // update the suer with what has happened
-           return res.status(200).json(`Your order was processed on ${dateString}, for a cost of ${costString}`)
+          // update the suer with what has happened
+          return res.status(200).json(`Your order was processed on ${dateString}, for a cost of ${costString}`)
 
-   }   catch {
+     } catch {
           return res.status(400).json({ msg: `An error occured when processing the customers order` });
      }
 });
