@@ -88,5 +88,14 @@
       "url": "/orders/process",
       "status": 200
     }
+  },
+  {
+    "date": "2020-10-1 17:41:38",
+    "email": "testuser@gmail.com",
+    "log info": {
+      "method": "POST",
+      "url": "/user/info",
+      "status": 200
+    }
   }
 ]

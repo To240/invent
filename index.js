@@ -137,7 +137,7 @@ app.post('/user/info', auth, requestLogger, async (req, res) => {
                     email: customers[i]["email"]
                });
           }
-          res.send(userValues)
+          res.status(200).json(userValues)
      }
 
      catch {
